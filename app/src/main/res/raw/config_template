@@ -1,0 +1,17 @@
+{
+  "date": "d.m.Y",
+  "default_account": 1, "_comment": "Figure out the exact account id",
+  "delimiter": "semicolon",
+  "headers": true,
+  "skip_form": true,
+  "roles": [
+    "date_book",
+    "date_transaction",
+    "_ignore",
+    "description",
+    "amount"
+  ],
+  "conversion": true,
+  "version": 3,
+  "flow": "csv"
+}
