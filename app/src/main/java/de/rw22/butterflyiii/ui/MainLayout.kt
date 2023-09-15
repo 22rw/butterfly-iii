@@ -15,10 +15,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,9 +65,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.core.text.isDigitsOnly
@@ -101,7 +107,7 @@ fun MainLayout() {
             ConstraintLayout (
                 modifier = Modifier.fillMaxSize()
             ) {
-                val (heading, toggle, input, portInput, cfgLabel, expBtn,div1, impBtn, div2, resetBtn) = createRefs()
+                val (heading, toggle, input, portInput, tokenInput, cfgLabel, expBtn,div1, impBtn, div2, resetBtn) = createRefs()
 
                 Text(
                     text = "Importer Config",
@@ -112,7 +118,11 @@ fun MainLayout() {
                     }
                 )
 
-                var useHttps by rememberSaveable { mutableStateOf(false) }
+                var useHttps by rememberSaveable { mutableStateOf(
+                    if(ctx is Activity) {
+                        ctx.getPreferences(Context.MODE_PRIVATE).getBoolean(ctx.getString(R.string.preference_https), false)
+                    } else false
+                ) }
                 val lineColor = MaterialTheme.colorScheme.onSurfaceVariant
                 IconButton(
                     onClick = { useHttps = !useHttps },
@@ -146,15 +156,11 @@ fun MainLayout() {
                         Icon(Icons.Outlined.Lock, contentDescription = "Protocol")
                 }
 
-                var ip by rememberSaveable { mutableStateOf("") }
-                if(ctx is Activity) {
-                    var sharedPref = ctx?.getPreferences(Context.MODE_PRIVATE)
-                    sharedPref?.let {
-                        it.getString("de.rw22.butterflyiii.fireflyIp", null)?.let {storedIp ->
-                            ip = storedIp
-                        }
-                    }
-                }
+                var ip by rememberSaveable { mutableStateOf(
+                    if(ctx is Activity) {
+                        ctx.getPreferences(Context.MODE_PRIVATE).getString(ctx.getString(R.string.preference_ip), null) ?: ""
+                    } else ""
+                ) }
                 TextField(
                     value = ip,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrect = true),
@@ -175,15 +181,14 @@ fun MainLayout() {
                     }
                 )
 
-                var port by rememberSaveable { mutableStateOf("") }
-                if(ctx is Activity) {
-                    var sharedPref = ctx?.getPreferences(Context.MODE_PRIVATE)
-                    sharedPref?.let {
-                        it.getInt("de.rw22.butterflyiii.importerPort", -1).let {p ->
-                            if(p != -1) port = "$p"
+
+                var port by rememberSaveable { mutableStateOf(
+                    if(ctx is Activity) {
+                        ctx.getPreferences(Context.MODE_PRIVATE).getInt(ctx.getString(R.string.preference_port), -1).let {
+                            if(it == -1) "" else "$it"
                         }
-                    }
-                }
+                    } else ""
+                ) }
                 TextField(
                     value = port,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrect = false),
@@ -204,11 +209,30 @@ fun MainLayout() {
                         .width(90.dp)
                 )
 
+                var accessToken by rememberSaveable { mutableStateOf(
+                    if(ctx is Activity) {
+                        ctx.getPreferences(Context.MODE_PRIVATE).getString(ctx.getString(R.string.preference_token), null) ?: ""
+                    } else ""
+                ) }
+                OutlinedTextField(
+                    singleLine = true,
+                    label = { Text("Personal Access Token") },
+                    value = accessToken,
+                    onValueChange = { accessToken = it.trim() },
+                    modifier = Modifier.constrainAs(tokenInput) {
+                        start.linkTo(toggle.start)
+                        end.linkTo(portInput.end)
+                        width = Dimension.fillToConstraints
+
+                        top.linkTo(input.bottom, margin = 32.dp)
+                    }
+                )
+
                 Text(
                     "config.json",
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.constrainAs(cfgLabel) {
-                        top.linkTo(input.bottom, margin = 48.dp)
+                        top.linkTo(tokenInput.bottom, margin = 48.dp)
                         start.linkTo(toggle.start)
                     }
                 )
@@ -321,13 +345,16 @@ fun MainLayout() {
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     onClick = {
+                        // Save all current user input values, then open the upload dialog
                         val sharedPref = (ctx as Activity)?.getPreferences(Context.MODE_PRIVATE) ?: return@ExtendedFloatingActionButton
                         with (sharedPref.edit()) {
-                            putBoolean("de.rw22.butterflyiii.useHttps", useHttps)
-                            if (ip != "") putString("de.rw22.butterflyiii.fireflyIp", ip)
-                            if (port != "") putInt("de.rw22.butterflyiii.importerPort", Integer.parseInt(port))
+                            putBoolean(ctx.getString(R.string.preference_https), useHttps)
+                            putString(ctx.getString(R.string.preference_ip), ip)
+                            putInt(ctx.getString(R.string.preference_port), if(port.isNotEmpty()) Integer.parseInt(port) else 0)
+                            putString(ctx.getString(R.string.preference_token), accessToken)
                             apply()
                         }
+
                         showSheet = true
                     },
                     modifier = Modifier.constrainAs(createRef()) {
@@ -433,12 +460,15 @@ fun MainLayout() {
                                         },
                                         shape = RoundedCornerShape(24.dp)
                                     ) {
-                                        Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
+                                        Box(modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(12.dp), contentAlignment = Alignment.Center) {
                                             val (dt, ct) = filterTransactionFile(allLines)
 
                                             Text(
-                                                text = dt.joinToString(separator = "\n") + ct.toMutableList().also { it.removeAt(0) }.joinToString(separator = "\n"),
-                                                color = MaterialTheme.colorScheme.onSurface,
+                                                text = dt.joinToString(separator = "\n") + "\n" + ct.toMutableList().also { it.removeAt(0) }.joinToString(separator = "\n"),
+                                                color = MaterialTheme.colorScheme.onSurface, ,
+                                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 25.sp),
                                                 modifier = Modifier
                                                     .verticalScroll(rememberScrollState())
                                                     .horizontalScroll(rememberScrollState())
@@ -533,6 +563,7 @@ private fun filterTransactionFile(allFileLines: List<String>): Pair<List<String>
 private fun uploadToFirefly(ctx: Context, debitTableLines: List<String>, creditTableLines: List<String>): Boolean {
     val builder: StringBuilder = StringBuilder()
     builder.append(debitTableLines.joinToString(separator = "\n"))
+    builder.append("\n")
     builder.append(creditTableLines.joinToString(separator = "\n"))
     val transactionTable = builder.toString()
     val tableFile = File(ctx.filesDir, "csv.csv")

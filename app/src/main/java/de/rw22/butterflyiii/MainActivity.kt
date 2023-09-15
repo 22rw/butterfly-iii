@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         }
 
         if(Config(this).checkFile(true)) {
-            Toast.makeText(this, "Found existing config file.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Found existing config file.", Toast.LENGTH_LONG)//.show()
         }
     }
 }

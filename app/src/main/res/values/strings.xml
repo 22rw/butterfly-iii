@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Butterfly III</string>
+    <string name="preference_https">de.rw22.butterflyiii.useHttps</string>
+    <string name="preference_ip">de.rw22.butterflyiii.fireflyIp</string>
+    <string name="preference_port">de.rw22.butterflyiii.fireflyPort</string>
+    <string name="preference_token">de.rw22.butterflyiii.accessToken</string>
+    <string-array name="preference_keys">
+        <item>de.rw22.butterflyiii.useHttps</item>
+        <item>de.rw22.butterflyiii.fireflyIp</item>
+        <item>de.rw22.butterflyiii.fireflyPort</item>
+        <item>de.rw22.butterflyiii.accessToken</item>
+    </string-array>
 </resources>
